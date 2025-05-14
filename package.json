@@ -14,7 +14,8 @@
     "dotenv": "^16.5.0",
     "express": "^5.1.0",
     "jsonwebtoken": "^9.0.2",
-    "mysql": "^2.18.1"
+    "mysql": "^2.18.1",
+    "test-express": "file:"
   },
   "devDependencies": {
     "nodemon": "^3.1.10"

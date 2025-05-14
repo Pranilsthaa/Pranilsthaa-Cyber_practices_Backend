@@ -19,6 +19,23 @@ require("dotenv").config();
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
+function authenticateAdmin(req, res, next) {
+  const adminUsername = process.env.admin_token;
+  const token = req.headers["authorization"]?.split(" ")[1];
+  if (!token) return res.status(401).send({ message: "Unauthorized" });
+
+  if (token !== adminUsername) {
+    return res.status(403).send({ message: "Forbidden" });
+  }
+  next();
+
+  // jwt.verify(token, "secretKey123", (err, user) => {
+  //   if (err) return res.sendStatus(403);
+  //   req.user = user;
+  //   next();
+  // });
+}
+
 app.post("/login", async (req, res) => {
   const { username, password } = req.body;
   try {
@@ -58,11 +75,42 @@ app.post("/login", async (req, res) => {
         res.status(200).json({
           message: "Login successful",
           token: adminToken,
+          role: "admin",
         });
       } else {
         res.status(401).json({ message: "Invalid credentials" });
       }
     }
+  } catch (e) {
+    console.log(e);
+  }
+});
+
+app.post("/register", async (req, res) => {
+  const { username, password } = req.body;
+  try {
+    const result = await runQuery("SELECT * FROM user_cred WHERE username=?", [
+      username,
+    ]);
+    if (result.length > 0) {
+      return res.status(400).send({ message: "User already exists" });
+    } else {
+      const hashedPassword = await bcrypt.hash(password, 10);
+      const result = await runQuery(
+        "INSERT INTO user_cred (username, password) VALUES (?, ?)",
+        [username, hashedPassword]
+      );
+      return res.status(200).send({ message: "User created successfully" });
+    }
+  } catch (e) {
+    console.log(e);
+  }
+});
+
+app.get("/users", authenticateAdmin, async (req, res) => {
+  try {
+    const result = await runQuery("SELECT id, username, role FROM user_cred");
+    return res.status(200).send(result);
   } catch (e) {
     console.log(e);
   }
