@@ -20,11 +20,11 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
 function authenticateAdmin(req, res, next) {
-  const adminUsername = process.env.admin_token;
+  const adminToken = process.env.admin_token;
   const token = req.headers["authorization"]?.split(" ")[1];
   if (!token) return res.status(401).send({ message: "Unauthorized" });
 
-  if (token !== adminUsername) {
+  if (token !== adminToken) {
     return res.status(403).send({ message: "Forbidden" });
   }
   next();
@@ -111,6 +111,59 @@ app.get("/users", authenticateAdmin, async (req, res) => {
   try {
     const result = await runQuery("SELECT id, username, role FROM user_cred");
     return res.status(200).send(result);
+  } catch (e) {
+    console.log(e);
+  }
+});
+
+app.get("/roles", authenticateAdmin, async (req, res) => {
+  if (!req.query.id) {
+    try {
+      const roles = await runQuery("SELECT * FROM user_roles");
+      return res.status(200).send(roles);
+    } catch (e) {
+      console.log(e);
+    }
+  } else {
+    try {
+      const permissions = await runQuery(
+        `
+      SELECT 
+      p.id,
+      p.permission,
+      rp.role_id IS NOT NULL AS assigned
+        FROM user_permission p
+          LEFT JOIN role_permission rp 
+      ON p.id = rp.permission_id AND rp.role_id = ?
+`,
+        [req.query.id]
+      );
+      return res.status(200).send(permissions);
+    } catch (e) {
+      console.log(e);
+    }
+  }
+});
+
+app.post("/update-permissions", authenticateAdmin, async (req, res) => {
+  const { role_id, permission_id } = req.body;
+  try {
+    const result = await runQuery(
+      "SELECT * FROM role_permission WHERE role_id=?",
+      [role_id]
+    );
+    if (result.length > 0) {
+      await runQuery("DELETE FROM role_permission WHERE role_id=?", [role_id]);
+    }
+
+    permission_id.map(async (permission_id) => {
+      await runQuery(
+        "INSERT INTO role_permission (role_id, permission_id) VALUES (?, ?)",
+        [role_id, permission_id]
+      );
+    });
+
+    return res.status(200).send({ message: "Permissions updated" });
   } catch (e) {
     console.log(e);
   }
