@@ -52,9 +52,20 @@ app.post("/login", async (req, res) => {
       const user = result[0];
       const hashPassword = user.password.toString();
       // Compare the provided password with the hashed password
-      bcrypt.compare(password, hashPassword).then(function (result) {
+      bcrypt.compare(password, hashPassword).then(async function (result) {
         if (result) {
-          // Generate a JWT token
+          const user_roles = await runQuery(
+            ` SELECT 
+              up.id,
+              up.permission
+              FROM user_permission up
+              INNER JOIN role_permission rp 
+                ON up.id = rp.permission_id
+              WHERE rp.role_id = ?;
+`,
+            [user.role]
+          );
+
           const token = jwt.sign(
             { id: user.id, username: user.name, role: user.role },
             "secretKey123",
@@ -63,8 +74,10 @@ app.post("/login", async (req, res) => {
           return res.status(200).send({
             token: token,
             message: "Login successful",
-            role: user.role,
+            role: user_roles,
           });
+        } else {
+          return res.status(401).send({ message: "Invalid credentials" });
         }
       });
     } else {
@@ -164,6 +177,26 @@ app.post("/update-permissions", authenticateAdmin, async (req, res) => {
     });
 
     return res.status(200).send({ message: "Permissions updated" });
+  } catch (e) {
+    console.log(e);
+  }
+});
+
+app.post("/update-role", authenticateAdmin, async (req, res) => {
+  const { user_id, role_id } = req.body;
+  try {
+    const result = await runQuery("SELECT * FROM user_cred WHERE id=?", [
+      user_id,
+    ]);
+    if (result.length > 0) {
+      await runQuery("UPDATE user_cred SET role=? WHERE id=?", [
+        role_id,
+        user_id,
+      ]);
+      return res.status(200).send({ message: "Role updated" });
+    } else {
+      return res.status(400).send({ message: "User not found" });
+    }
   } catch (e) {
     console.log(e);
   }
