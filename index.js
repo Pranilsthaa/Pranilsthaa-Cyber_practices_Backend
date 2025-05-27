@@ -214,6 +214,11 @@ app.post("/update-role", authenticateAdmin, async (req, res) => {
   }
 });
 
+app.post("/logout", (req, res) => {
+  res.clearCookie("token");
+  return res.status(200).send({ message: "Logout successful" });
+});
+
 app.listen(port, "0.0.0.0", () => {
   console.log(`Example app listening on port ${port}`);
 });
