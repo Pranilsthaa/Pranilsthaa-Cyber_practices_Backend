@@ -1,7 +1,8 @@
 const express = require("express");
 const app = express();
 const cors = require("cors");
-const port = 3000;
+const port = 5000;
+const cookieParser = require("cookie-parser");
 
 const bcrypt = require("bcrypt");
 const jwt = require("jsonwebtoken");
@@ -10,7 +11,8 @@ const { runQuery } = require("./connection");
 
 app.use(
   cors({
-    origin: "*",
+    origin: "http://192.168.1.17:3000",
+    credentials: true, // Allow credentials (cookies, authorization headers, etc.)
   })
 );
 
@@ -18,6 +20,7 @@ require("dotenv").config();
 
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
+app.use(cookieParser());
 
 function authenticateAdmin(req, res, next) {
   const adminToken = process.env.admin_token;
@@ -35,6 +38,10 @@ function authenticateAdmin(req, res, next) {
   //   next();
   // });
 }
+
+app.get("/", (req, res) => {
+  res.send("Hello World!");
+});
 
 app.post("/login", async (req, res) => {
   const { username, password } = req.body;
@@ -71,8 +78,12 @@ app.post("/login", async (req, res) => {
             "secretKey123",
             { expiresIn: "1h" }
           );
+          res.cookie("token", token, {
+            httpOnly: true,
+            secure: false,
+            sameSite: "lax",
+          });
           return res.status(200).send({
-            token: token,
             message: "Login successful",
             role: user_roles,
           });
@@ -101,6 +112,7 @@ app.post("/login", async (req, res) => {
 
 app.post("/register", async (req, res) => {
   const { username, password } = req.body;
+  console.log("hello");
   try {
     const result = await runQuery("SELECT * FROM user_cred WHERE username=?", [
       username,
