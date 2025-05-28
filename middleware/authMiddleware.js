@@ -7,6 +7,7 @@ function authenticate(req, res, next) {
   }
   jwt.verify(token, "secretKey123", (err, user) => {
     if (err) {
+      console.log("error");
       return res.status(403).send({ message: "Forbidden" });
     }
     req.user = user; // Attach user info to request

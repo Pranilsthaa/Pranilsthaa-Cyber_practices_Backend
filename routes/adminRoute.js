@@ -9,7 +9,7 @@ const {
 
 adminRoute.get("/get-users", getUsers);
 adminRoute.get("/get-user-roles", getUserRoles);
-adminRoute.get("/update-permissions", updatePermission);
-adminRoute.get("/update-role", updateRole);
+adminRoute.post("/update-permissions", updatePermission);
+adminRoute.post("/update-role", updateRole);
 
 module.exports = adminRoute;

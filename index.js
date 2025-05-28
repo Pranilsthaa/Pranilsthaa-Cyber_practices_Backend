@@ -13,6 +13,7 @@ require("dotenv").config();
 
 const authRouter = require("./routes/authRoute");
 const adminRoute = require("./routes/adminRoute");
+const userRouter = require("./routes/userRouter");
 
 app.use(
   cors({
@@ -26,6 +27,7 @@ app.use(cookieParser());
 
 app.use("/", authRouter);
 app.use("/admin", authenticate, authenticateAdmin, adminRoute);
+app.use("/user", authenticate, userRouter);
 
 app.listen(port, "0.0.0.0", () => {
   console.log(`Example app listening on port ${port}`);
