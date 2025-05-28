@@ -22,24 +22,28 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(cookieParser());
 
-function authenticateAdmin(req, res, next) {
-  const adminToken = process.env.admin_token;
-  const token = req.headers["authorization"]?.split(" ")[1];
-  if (!token) return res.status(401).send({ message: "Unauthorized" });
-
-  if (token !== adminToken) {
-    return res.status(403).send({ message: "Forbidden" });
+function authenticate(req, res, next) {
+  const token = req.cookies.token;
+  if (!token) {
+    return res.status(401).send({ message: "Unauthorized" });
   }
-  next();
-
-  // jwt.verify(token, "secretKey123", (err, user) => {
-  //   if (err) return res.sendStatus(403);
-  //   req.user = user;
-  //   next();
-  // });
+  jwt.verify(token, "secretKey123", (err, user) => {
+    if (err) {
+      return res.status(403).send({ message: "Forbidden" });
+    }
+    req.user = user; // Attach user info to request
+    next(); // Proceed to the next middleware or route handler
+  });
 }
 
-app.get("/", (req, res) => {
+function authenticateAdmin(req, res, next) {
+  if (req.user.role !== "3") {
+    return res.status(403).send({ message: "Forbidden" });
+  }
+  next(); // Proceed to the next middleware or route handler
+}
+
+app.get("/", authenticate, (req, res) => {
   res.send("Hello World!");
 });
 
@@ -61,6 +65,7 @@ app.post("/login", async (req, res) => {
       // Compare the provided password with the hashed password
       bcrypt.compare(password, hashPassword).then(async function (result) {
         if (result) {
+          const isAdmin = user.role === "3"; // role 3 is admin
           const user_roles = await runQuery(
             ` SELECT 
               up.id,
@@ -86,24 +91,12 @@ app.post("/login", async (req, res) => {
           return res.status(200).send({
             message: "Login successful",
             role: user_roles,
+            isAdmin: isAdmin,
           });
         } else {
           return res.status(401).send({ message: "Invalid credentials" });
         }
       });
-    } else {
-      const adminUsername = process.env.admin_username;
-      const adminPassword = process.env.admin_password;
-      const adminToken = process.env.admin_token;
-      if (username === adminUsername && password === adminPassword) {
-        res.status(200).json({
-          message: "Login successful",
-          token: adminToken,
-          role: "admin",
-        });
-      } else {
-        res.status(401).json({ message: "Invalid credentials" });
-      }
     }
   } catch (e) {
     console.log(e);
@@ -132,7 +125,7 @@ app.post("/register", async (req, res) => {
   }
 });
 
-app.get("/users", authenticateAdmin, async (req, res) => {
+app.get("/users", authenticate, authenticateAdmin, async (req, res) => {
   try {
     const result = await runQuery("SELECT id, username, role FROM user_cred");
     return res.status(200).send(result);
@@ -141,7 +134,7 @@ app.get("/users", authenticateAdmin, async (req, res) => {
   }
 });
 
-app.get("/roles", authenticateAdmin, async (req, res) => {
+app.get("/roles", authenticate, authenticateAdmin, async (req, res) => {
   if (!req.query.id) {
     try {
       const roles = await runQuery("SELECT * FROM user_roles");
