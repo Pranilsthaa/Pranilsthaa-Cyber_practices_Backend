@@ -21,7 +21,6 @@ const login = async (req, res) => {
       bcrypt.compare(password, hashPassword).then(async function (result) {
         if (result) {
           const isAdmin = user.role === "3"; // role 3 is admin
-          console.log(user);
           const user_roles = await runQuery(
             ` SELECT 
               up.id,

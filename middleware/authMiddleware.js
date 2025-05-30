@@ -1,4 +1,5 @@
 const jwt = require("jsonwebtoken");
+const { fetchUserPermissions } = require("../controller/userController");
 
 function authenticate(req, res, next) {
   const token = req.cookies.token;
@@ -7,11 +8,11 @@ function authenticate(req, res, next) {
   }
   jwt.verify(token, "secretKey123", (err, user) => {
     if (err) {
-      console.log("error");
+      console.log("Token Error");
       return res.status(403).send({ message: "Forbidden" });
     }
     req.user = user; // Attach user info to request
-    next(); // Proceed to the next middleware or route handler
+    next();
   });
 }
 
@@ -19,7 +20,22 @@ function authenticateAdmin(req, res, next) {
   if (req.user.role !== "3") {
     return res.status(403).send({ message: "Forbidden" });
   }
-  next(); // Proceed to the next middleware or route handler
+  next();
 }
 
-module.exports = { authenticate, authenticateAdmin };
+function authorizePermission(permission) {
+  return async (req, res, next) => {
+    const userPermissions = await fetchUserPermissions(req.user.role);
+    const hasPermission = userPermissions.some((userPerm) =>
+      permission.includes(userPerm.permission)
+    );
+    if (!hasPermission) {
+      return res
+        .status(403)
+        .send({ message: "Required Permission Not Matched" });
+    }
+    next();
+  };
+}
+
+module.exports = { authenticate, authenticateAdmin, authorizePermission };
