@@ -17,7 +17,7 @@ const userRouter = require("./routes/userRouter");
 
 app.use(
   cors({
-    origin: "http://192.168.1.112:3000",
+    origin: "http://192.168.1.168:3000",
     credentials: true, // Allow credentials cookies, authorization headers
   })
 );

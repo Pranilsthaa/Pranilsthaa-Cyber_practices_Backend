@@ -4,12 +4,12 @@ const { fetchUserPermissions } = require("../controller/userController");
 function authenticate(req, res, next) {
   const token = req.cookies.token;
   if (!token) {
-    return res.status(401).send({ message: "Unauthorized" });
+    return res.status(419).send({ message: "Unauthorized" });
   }
   jwt.verify(token, "secretKey123", (err, user) => {
     if (err) {
       console.log("Token Error");
-      return res.status(403).send({ message: "Forbidden" });
+      return res.status(419).send({ message: "Forbidden" });
     }
     req.user = user; // Attach user info to request
     next();
