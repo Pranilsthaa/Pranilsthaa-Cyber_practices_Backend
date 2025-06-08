@@ -1,9 +1,22 @@
 const { runQuery } = require("../connection");
+const crypto = require("crypto");
+const { encrypt } = require("../helper/encrypt");
 
 const getUsers = async (req, res) => {
   try {
     const result = await runQuery("SELECT id, username, role FROM user_cred");
-    return res.status(200).send(result);
+    if (result.length > 0) {
+      const SECRET_KEY = crypto.randomBytes(32); // 32 bytes for AES-256
+      const IV = crypto.randomBytes(16); // 16 bytes for AES block size
+      const encryptedData = encrypt(JSON.stringify(result), SECRET_KEY, IV);
+      return res.status(200).send({
+        enc: encryptedData,
+        iv: IV.toString("hex"),
+        key: SECRET_KEY.toString("hex"),
+      });
+    } else {
+      return res.status(200).send([]);
+    }
   } catch (e) {
     console.log(e);
   }
