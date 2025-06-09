@@ -2,6 +2,7 @@ const express = require("express");
 const app = express();
 const cors = require("cors");
 const cookieParser = require("cookie-parser");
+const rateLimit = require("express-rate-limit");
 const port = 5000;
 
 const {
@@ -24,6 +25,22 @@ app.use(
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(cookieParser());
+
+const limiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  limit: 10, // Limit each IP to 10 per 15 minutes
+  standardHeaders: "draft-8",
+  legacyHeaders: false, // Disable the `X-RateLimit-*` headers.
+  handler: (req, res /*next*/) => {
+    res.status(429).json({
+      message:
+        "Too many requests from this IP, please try again after 15 minutes.",
+    });
+  },
+});
+
+// Apply the rate limiting middleware to all requests.
+app.use(limiter);
 
 app.use("/", authRouter);
 app.use("/admin", authenticate, authenticateAdmin, adminRoute);
