@@ -36,7 +36,7 @@ const limiter = rateLimit({
 });
 
 // Apply the rate limiting middleware to all requests.
-app.use(limiter);
+// app.use(limiter);
 
 app.use('/', authRouter);
 app.use('/admin', authenticate, authenticateAdmin, adminRoute);

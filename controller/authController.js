@@ -82,7 +82,6 @@ const login = async (req, res) => {
 
 const register = async (req, res) => {
   const {email, username, password, captcha} = req.body;
-  console.log('object');
   // const verifyCaptcha = await axios.post(
   //   'https://www.google.com/recaptcha/api/siteverify',
   //   {
@@ -119,6 +118,8 @@ const logout = (req, res) => {
   return res.status(200).send({message: 'Logout successful'});
 };
 
+let user_otp = {};
+
 const verifyEmail = async (req, res) => {
   const {email} = req.body;
   try {
@@ -126,14 +127,59 @@ const verifyEmail = async (req, res) => {
 
     if (user.length > 0) {
       const otp = generateOTP(6);
-      res.status(200).send({message: 'If the email exists, an OTP has been sent.'});
+      user_otp[email] = {otp: otp, expiry: Date.now() + 60 * 1000};
       await sendMail(email, 'Test OTP', otp);
+      return res
+        .status(200)
+        .send({message: 'If the email exists, an OTP has been sent.'});
     } else {
-      res.status(200).send({message: 'If the email exists, an OTP has been sent.'});
+      return res
+        .status(200)
+        .send({message: 'If the email exists, an OTP has been sent.'});
     }
   } catch (e) {
     console.log(e);
     return res.status(500).send({message: 'Internal Server Error'});
   }
 };
-module.exports = {login, register, logout, verifyEmail};
+
+const verifyOTP = async (req, res) => {
+  const {otp, email} = req.body;
+  console.log(user_otp[email]);
+  if (!user_otp[email] || user_otp[email].expiry < Date.now()) {
+    return res.status(400).send({message: 'OTP expired or invalid'});
+  }
+  try {
+    if (user_otp[email]?.otp == otp) {
+      user_otp[email].verified = true;
+      return res.status(200).send({message: 'OTP verified Succesfully'});
+    } else {
+      return res.status(400).send({message: 'OTP expired or invalid'});
+    }
+  } catch (e) {
+    console.log('otp error', e);
+    return res.status(400).send({message: 'Internal Server Error'});
+  }
+};
+
+const changePassword = async (req, res) => {
+  const {email, newPassword} = req.body;
+
+  if (!user_otp[email]?.verified)
+    return res.status(400).send({message: 'OTP verification error !'});
+  try {
+    const encryptPassword = await bcrypt.hash(newPassword, 10);
+    const result = await runQuery('UPDATE user_cred SET password=? WHERE email=?', [
+      encryptPassword,
+      email,
+    ]);
+    if (result) {
+      return res.status(200).send({message: 'Password saved successfully!'});
+    }
+  } catch (error) {
+    console.log(error);
+    return res.status(400).send({message: 'Something went wrong!'});
+  }
+};
+
+module.exports = {login, register, logout, verifyEmail, verifyOTP, changePassword};

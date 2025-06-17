@@ -1,11 +1,11 @@
-const nodemailer = require("nodemailer");
+const nodemailer = require('nodemailer');
 
 const transporter = nodemailer.createTransport({
-  host: "smtp.gmail.com",
+  host: 'smtp.gmail.com',
   secure: true,
   auth: {
-    user: "pranilstha122@gmail.com",
-    pass: "iyku pruu kcbh sxoi",
+    user: 'pranilstha122@gmail.com',
+    pass: 'iyku pruu kcbh sxoi',
   },
 });
 
@@ -17,11 +17,10 @@ const sendMail = async (receiver, subject, text) => {
       subject: subject,
       html: `<b>${text}</b>`,
     });
+    console.log('Message sent: %s', info.messageId);
   } catch (err) {
-    console.log("Mail Error", err);
+    console.log('Mail Error', err);
   }
-
-  console.log("Message sent: %s", info.messageId);
 };
 
 module.exports = {
