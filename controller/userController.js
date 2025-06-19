@@ -17,13 +17,12 @@ const fetchUserPermissions = async roleId => {
 };
 
 const getUserPermission = async (req, res) => {
-  console.log(req.user.role);
   try {
     const user_permissions = await fetchUserPermissions(req.user.role);
     if (user_permissions.length > 0) {
       res.status(200).send(user_permissions);
     } else {
-      res.status(404).send({message: 'No permissions found for this user.'});
+      res.status(204).send({message: 'No permissions found for this user.'});
     }
   } catch (error) {
     console.error('Error fetching user role:', error);

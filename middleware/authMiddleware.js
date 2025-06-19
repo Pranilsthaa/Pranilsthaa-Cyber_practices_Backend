@@ -5,7 +5,7 @@ const {runQuery} = require('../connection');
 function authenticate(req, res, next) {
   const token = req.cookies.token;
   if (!token) {
-    return res.status(419).send({message: 'Unauthorized'});
+    return res.status(419).send({message: 'Unauthorized Access !!!'});
   }
   jwt.verify(token, 'secretKey123', async (err, user) => {
     if (err) {

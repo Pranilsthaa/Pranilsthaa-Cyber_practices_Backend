@@ -63,7 +63,8 @@ const login = async (req, res) => {
           });
           return res.status(200).send({
             message: 'Login successful',
-            role: user_roles,
+            role: user.role,
+            permission: user_roles,
             isAdmin: isAdmin,
           });
         } else {

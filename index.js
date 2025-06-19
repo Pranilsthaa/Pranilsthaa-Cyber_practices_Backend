@@ -12,10 +12,11 @@ require('dotenv').config();
 const authRouter = require('./routes/authRoute');
 const adminRoute = require('./routes/adminRoute');
 const userRouter = require('./routes/userRouter');
+const {clientRouter} = require('./routes/clientRoute');
 
 app.use(
   cors({
-    origin: 'http://192.168.1.113:3000',
+    origin: 'http://192.168.1.169:3000',
     credentials: true, // Allow credentials cookies, authorization headers
   }),
 );
@@ -41,6 +42,7 @@ const limiter = rateLimit({
 app.use('/', authRouter);
 app.use('/admin', authenticate, authenticateAdmin, adminRoute);
 app.use('/user', authenticate, userRouter);
+app.use('/client', authenticate, clientRouter);
 
 app.listen(port, '0.0.0.0', () => {
   console.log(`Example app listening on port ${port}`);
