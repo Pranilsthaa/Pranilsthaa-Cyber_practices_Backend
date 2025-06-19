@@ -41,6 +41,7 @@ const getUserRoles = async (req, res) => {
       SELECT 
       p.id,
       p.permission,
+      p.type,
       rp.role_id IS NOT NULL AS assigned
         FROM user_permission p
           LEFT JOIN role_permission rp 
@@ -48,7 +49,11 @@ const getUserRoles = async (req, res) => {
 `,
         [req.query.id],
       );
-      return res.status(200).send(permissions);
+      return res.status(200).send({
+        client: permissions.filter(permission => permission.type === 'client') || [],
+        employee: permissions.filter(permission => permission.type === 'manager') || [],
+        project: permissions.filter(permission => permission.type === 'auditor') || [],
+      });
     } catch (e) {
       console.log(e);
     }

@@ -13,6 +13,7 @@ const authRouter = require('./routes/authRoute');
 const adminRoute = require('./routes/adminRoute');
 const userRouter = require('./routes/userRouter');
 const {clientRouter} = require('./routes/clientRoute');
+const {managerRoute} = require('./routes/managerRoute');
 
 app.use(
   cors({
@@ -43,6 +44,7 @@ app.use('/', authRouter);
 app.use('/admin', authenticate, authenticateAdmin, adminRoute);
 app.use('/user', authenticate, userRouter);
 app.use('/client', authenticate, clientRouter);
+app.use('/manager', authenticate, managerRoute);
 
 app.listen(port, '0.0.0.0', () => {
   console.log(`Example app listening on port ${port}`);

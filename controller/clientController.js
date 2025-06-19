@@ -13,4 +13,16 @@ const verifyClient = async (req, res) => {
   }
 };
 
-module.exports = {verifyClient};
+const getReports = async (req, res) => {
+  return res.status(200).send({message: 'Dummy reports'});
+};
+
+const getDashboardData = async (req, res) => {
+  return res.status(200).send({message: 'Dummy dashboard data'});
+};
+
+const getClientTickets = async (req, res) => {
+  return res.status(200).send({message: 'Dummy client tickets data'});
+};
+
+module.exports = {verifyClient, getReports, getDashboardData, getClientTickets};
