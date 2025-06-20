@@ -20,7 +20,10 @@ const getUserPermission = async (req, res) => {
   try {
     const user_permissions = await fetchUserPermissions(req.user.role);
     if (user_permissions.length > 0) {
-      res.status(200).send(user_permissions);
+      res.status(200).send({
+        user_permissions,
+        roleId: req.user.role,
+      });
     } else {
       res.status(204).send({message: 'No permissions found for this user.'});
     }
