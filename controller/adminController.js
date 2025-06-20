@@ -51,8 +51,8 @@ const getUserRoles = async (req, res) => {
       );
       return res.status(200).send({
         client: permissions.filter(permission => permission.type === 'client') || [],
-        employee: permissions.filter(permission => permission.type === 'manager') || [],
-        project: permissions.filter(permission => permission.type === 'auditor') || [],
+        manager: permissions.filter(permission => permission.type === 'manager') || [],
+        auditor: permissions.filter(permission => permission.type === 'auditor') || [],
       });
     } catch (e) {
       console.log(e);
