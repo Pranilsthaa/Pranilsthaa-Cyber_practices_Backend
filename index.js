@@ -14,10 +14,11 @@ const adminRoute = require('./routes/adminRoute');
 const userRouter = require('./routes/userRouter');
 const {clientRouter} = require('./routes/clientRoute');
 const {managerRoute} = require('./routes/managerRoute');
+const {auditorRouter} = require('./routes/auditorRoute');
 
 app.use(
   cors({
-    origin: 'http://192.168.1.113:3000',
+    origin: 'http://192.168.1.169:3001',
     credentials: true, // Allow credentials cookies, authorization headers
   }),
 );
@@ -45,6 +46,7 @@ app.use('/admin', authenticate, authenticateAdmin, adminRoute);
 app.use('/user', authenticate, userRouter);
 app.use('/client', authenticate, clientRouter);
 app.use('/manager', authenticate, managerRoute);
+app.use('/auditor', authenticate, auditorRouter);
 
 app.listen(port, '0.0.0.0', () => {
   console.log(`Example app listening on port ${port}`);
