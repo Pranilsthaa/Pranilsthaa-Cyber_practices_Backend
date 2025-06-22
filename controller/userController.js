@@ -33,47 +33,10 @@ const getUserPermission = async (req, res) => {
   }
 };
 
-const dummyEmployee = [
-  {
-    id: 1,
-    name: 'John Doe',
-    position: 'Software Engineer',
-    department: 'Engineering',
-  },
-  {
-    id: 2,
-    name: 'Jane Smith',
-    position: 'Product Manager',
-    department: 'Product',
-  },
-  {
-    id: 3,
-    name: 'Alice Johnson',
-    position: 'UX Designer',
-    department: 'Design',
-  },
-  {
-    id: 4,
-    name: 'Bob Brown',
-    position: 'Data Scientist',
-    department: 'Data Science',
-  },
-  {
-    id: 5,
-    name: 'Charlie White',
-    position: 'DevOps Engineer',
-    department: 'Operations',
-  },
-];
-
-const getEmployee = async (req, res) => {
-  res.status(200).send(dummyEmployee);
-};
-
 const getProfile = async (req, res) => {
   try {
     const user = await runQuery(
-      'SELECT email, username, phone, address, role FROM user_cred WHERE id=?',
+      'SELECT email, username, phone, address, role, 2fa FROM user_cred WHERE id=?',
       [req.user.id],
     );
     if (user.length > 0) {
@@ -87,9 +50,22 @@ const getProfile = async (req, res) => {
   }
 };
 
+const toggle2FA = async (req, res) => {
+  try {
+    const {enable} = req.body;
+    if (typeof enable !== 'boolean') {
+      return res.status(400).send({message: 'Invalid request body'});
+    }
+    await runQuery(`UPDATE user_cred SET 2fa = ? WHERE id = ?`, [enable, req.user.id]);
+    res.status(200).send({message: '2FA setting updated successfully'});
+  } catch (e) {
+    console.log(e);
+  }
+};
+
 module.exports = {
   fetchUserPermissions,
   getUserPermission,
-  getEmployee,
   getProfile,
+  toggle2FA,
 };
