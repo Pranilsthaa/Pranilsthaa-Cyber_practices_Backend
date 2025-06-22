@@ -361,10 +361,11 @@ const register = async (req, res) => {
     if (result.length > 0) {
       return res.status(400).send({message: 'User already exists'});
     } else {
+      const timestamp = new Date().toISOString().slice(0, 19).replace('T', ' ');
       const hashedPassword = await bcrypt.hash(password, 10);
       const result = await runQuery(
-        'INSERT INTO user_cred (email, username, password, phone, address) VALUES (?, ?, ?, ?, ?)',
-        [email, username, hashedPassword, phone, address],
+        'INSERT INTO user_cred (email, username, password, phone, address, password_changed_at) VALUES (?, ?, ?, ?, ?, ?)',
+        [email, username, hashedPassword, phone, address, timestamp],
       );
       return res.status(200).send({message: 'User created successfully'});
     }
@@ -434,11 +435,12 @@ const changePassword = async (req, res) => {
   if (!user_otp[email]?.verified)
     return res.status(400).send({message: 'OTP verification error !'});
   try {
+    const timestamp = new Date().toISOString().slice(0, 19).replace('T', ' ');
     const encryptPassword = await bcrypt.hash(newPassword, 10);
-    const result = await runQuery('UPDATE user_cred SET password=? WHERE email=?', [
-      encryptPassword,
-      email,
-    ]);
+    const result = await runQuery(
+      'UPDATE user_cred SET password=?, password_changed_at=? WHERE email=?',
+      [encryptPassword, timestamp, email],
+    );
     if (result) {
       return res.status(200).send({message: 'Password saved successfully!'});
     }
@@ -463,11 +465,12 @@ const updatePasswordWithOld = async (req, res) => {
     if (!isMatch) {
       return res.status(410).send({message: 'Old password is incorrect'});
     }
+    const timestamp = new Date().toISOString().slice(0, 19).replace('T', ' ');
     const hashedNewPassword = await bcrypt.hash(newPassword, 10);
-    await runQuery(`UPDATE user_cred SET password = ? WHERE id = ?`, [
-      hashedNewPassword,
-      req.user.id,
-    ]);
+    await runQuery(
+      `UPDATE user_cred SET password = ?, password_changed_at = ? WHERE id = ?`,
+      [hashedNewPassword, timestamp, req.user.id],
+    );
     return res.status(200).send({message: 'Password updated successfully!'});
   } catch (error) {
     console.log(error);

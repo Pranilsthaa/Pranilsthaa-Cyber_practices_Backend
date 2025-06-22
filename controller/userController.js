@@ -36,7 +36,7 @@ const getUserPermission = async (req, res) => {
 const getProfile = async (req, res) => {
   try {
     const user = await runQuery(
-      'SELECT email, username, phone, address, role, 2fa FROM user_cred WHERE id=?',
+      'SELECT email, username, phone, address, role, 2fa, password_changed_at FROM user_cred WHERE id=?',
       [req.user.id],
     );
     if (user.length > 0) {
