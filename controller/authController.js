@@ -448,6 +448,33 @@ const changePassword = async (req, res) => {
   }
 };
 
+const updatePasswordWithOld = async (req, res) => {
+  const {oldPassword, newPassword} = req.body;
+  try {
+    const runQueryResult = await runQuery(
+      `SELECT (password) FROM user_cred WHERE id = ?`,
+      [req.user.id],
+    );
+    if (runQueryResult.length === 0) {
+      return res.status(404).send({message: 'User not found'});
+    }
+    const user = runQueryResult[0];
+    const isMatch = await bcrypt.compare(oldPassword, user.password);
+    if (!isMatch) {
+      return res.status(410).send({message: 'Old password is incorrect'});
+    }
+    const hashedNewPassword = await bcrypt.hash(newPassword, 10);
+    await runQuery(`UPDATE user_cred SET password = ? WHERE id = ?`, [
+      hashedNewPassword,
+      req.user.id,
+    ]);
+    return res.status(200).send({message: 'Password updated successfully!'});
+  } catch (error) {
+    console.log(error);
+    return res.status(400).send({message: 'Something went wrong!'});
+  }
+};
+
 module.exports = {
   login,
   approve,
@@ -459,4 +486,5 @@ module.exports = {
   verifyEmail,
   verifyOTP,
   changePassword,
+  updatePasswordWithOld,
 };
