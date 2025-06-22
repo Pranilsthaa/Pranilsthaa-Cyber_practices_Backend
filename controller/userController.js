@@ -70,8 +70,26 @@ const getEmployee = async (req, res) => {
   res.status(200).send(dummyEmployee);
 };
 
+const getProfile = async (req, res) => {
+  try {
+    const user = await runQuery(
+      'SELECT email, username, phone, address, role FROM user_cred WHERE id=?',
+      [req.user.id],
+    );
+    if (user.length > 0) {
+      res.status(200).send(user[0]);
+    } else {
+      res.status(404).send({message: 'User not found'});
+    }
+  } catch (error) {
+    console.error('Error fetching user profile:', error);
+    res.status(500).send({message: 'Internal server error'});
+  }
+};
+
 module.exports = {
   fetchUserPermissions,
   getUserPermission,
   getEmployee,
+  getProfile,
 };

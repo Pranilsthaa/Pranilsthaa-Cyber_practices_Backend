@@ -13,7 +13,7 @@ function authenticate(req, res, next) {
       return res.status(419).send({message: 'Forbidden'});
     }
     const updatedUser = await runQuery(
-      'SELECT email, username, role FROM user_cred WHERE id=?',
+      'SELECT id, email, username, role FROM user_cred WHERE id=?',
       [user.id],
     );
     if (updatedUser.length === 0) {

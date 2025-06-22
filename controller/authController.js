@@ -82,7 +82,7 @@ const login = async (req, res) => {
 };
 
 const register = async (req, res) => {
-  const {email, username, password, captcha} = req.body;
+  const {email, username, password, phone, address, captcha} = req.body;
   // const verifyCaptcha = await axios.post(
   //   'https://www.google.com/recaptcha/api/siteverify',
   //   {
@@ -98,8 +98,8 @@ const register = async (req, res) => {
     } else {
       const hashedPassword = await bcrypt.hash(password, 10);
       const result = await runQuery(
-        'INSERT INTO user_cred (email, username, password) VALUES (?, ?, ?)',
-        [email, username, hashedPassword],
+        'INSERT INTO user_cred (email, username, password, phone, address) VALUES (?, ?, ?, ?, ?)',
+        [email, username, hashedPassword, phone, address],
       );
       return res.status(200).send({message: 'User created successfully'});
     }
