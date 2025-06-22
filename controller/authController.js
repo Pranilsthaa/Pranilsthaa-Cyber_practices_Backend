@@ -7,6 +7,7 @@ const {generateOTP} = require('../helper/generateOTP');
 const {sendMail} = require('../helper/mailService');
 
 const os = require('os');
+const {isPasswordRepeated} = require('../helper/passwordHistory');
 let currentIP = '';
 const interfaces = os.networkInterfaces();
 
@@ -23,22 +24,22 @@ const failureCount = {};
 
 const login = async (req, res) => {
   const {username, password, captcha} = req.body;
-  if (failureCount[req.ip] >= 3) {
-    const params = new URLSearchParams();
-    params.append('secret', '6LebM1orAAAAAIdd2q44zjIe8F78ymp4K4m_xo1m');
-    params.append('response', captcha);
-    params.append('remoteip', req.ip);
-    // Verify the captcha
-    const verifyCaptcha = await axios.post(
-      'https://www.google.com/recaptcha/api/siteverify',
-      params,
-    );
-    console.log(verifyCaptcha.data);
-    if (!verifyCaptcha.data.success) {
-      res.status(400).send({message: 'Invalid Captcha'});
-      return;
-    }
-  }
+  // if (failureCount[req.ip] >= 3) {
+  //   const params = new URLSearchParams();
+  //   params.append('secret', '6LebM1orAAAAAIdd2q44zjIe8F78ymp4K4m_xo1m');
+  //   params.append('response', captcha);
+  //   params.append('remoteip', req.ip);
+  //   // Verify the captcha
+  //   const verifyCaptcha = await axios.post(
+  //     'https://www.google.com/recaptcha/api/siteverify',
+  //     params,
+  //   );
+  //   console.log(verifyCaptcha.data);
+  //   if (!verifyCaptcha.data.success) {
+  //     res.status(400).send({message: 'Invalid Captcha'});
+  //     return;
+  //   }
+  // }
   try {
     const result = await runQuery('SELECT * FROM user_cred WHERE username=?', [username]);
     if (result.length > 0) {
@@ -364,9 +365,14 @@ const register = async (req, res) => {
       const timestamp = new Date().toISOString().slice(0, 19).replace('T', ' ');
       const hashedPassword = await bcrypt.hash(password, 10);
       const result = await runQuery(
-        'INSERT INTO user_cred (email, username, password, phone, address, password_changed_at) VALUES (?, ?, ?, ?, ?, ?)',
-        [email, username, hashedPassword, phone, address, timestamp],
+        'INSERT INTO user_cred (email, username, password, phone, address, 2fa, password_changed_at) VALUES (?, ?, ?, ?, ?, ?, ?)',
+        [email, username, hashedPassword, phone, address, 0, timestamp],
       );
+      await runQuery('INSERT INTO password_history VALUES (?, ?)', [
+        result.insertId,
+        hashedPassword,
+      ]);
+      console.log('User created successfully');
       return res.status(200).send({message: 'User created successfully'});
     }
   } catch (e) {
@@ -394,7 +400,7 @@ const verifyEmail = async (req, res) => {
 
     if (user.length > 0) {
       const otp = generateOTP(6);
-      user_otp[email] = {otp: otp, expiry: Date.now() + 60 * 1000};
+      user_otp[email] = {id: user[0].id, otp: otp, expiry: Date.now() + 60 * 1000};
       await sendMail(email, 'Test OTP', otp);
       return res
         .status(200)
@@ -435,13 +441,23 @@ const changePassword = async (req, res) => {
   if (!user_otp[email]?.verified)
     return res.status(400).send({message: 'OTP verification error !'});
   try {
+    const isRepeated = await isPasswordRepeated(user_otp[email].id, newPassword);
+    if (isRepeated) {
+      return res.status(400).send({
+        message: 'New password cannot be the same as any of the previous passwords.',
+      });
+    }
     const timestamp = new Date().toISOString().slice(0, 19).replace('T', ' ');
-    const encryptPassword = await bcrypt.hash(newPassword, 10);
+    const hashPassword = await bcrypt.hash(newPassword, 10);
     const result = await runQuery(
       'UPDATE user_cred SET password=?, password_changed_at=? WHERE email=?',
-      [encryptPassword, timestamp, email],
+      [hashPassword, timestamp, email],
     );
     if (result) {
+      await runQuery('INSERT INTO password_history VALUES (?, ?)', [
+        user_otp[email].id,
+        hashPassword,
+      ]);
       return res.status(200).send({message: 'Password saved successfully!'});
     }
   } catch (error) {
@@ -452,6 +468,7 @@ const changePassword = async (req, res) => {
 
 const updatePasswordWithOld = async (req, res) => {
   const {oldPassword, newPassword} = req.body;
+
   try {
     const runQueryResult = await runQuery(
       `SELECT (password) FROM user_cred WHERE id = ?`,
@@ -465,12 +482,22 @@ const updatePasswordWithOld = async (req, res) => {
     if (!isMatch) {
       return res.status(410).send({message: 'Old password is incorrect'});
     }
+    const isRepeated = await isPasswordRepeated(req.user.id, newPassword);
+    if (isRepeated) {
+      return res.status(400).send({
+        message: 'New password cannot be the same as any of the previous passwords.',
+      });
+    }
     const timestamp = new Date().toISOString().slice(0, 19).replace('T', ' ');
     const hashedNewPassword = await bcrypt.hash(newPassword, 10);
     await runQuery(
       `UPDATE user_cred SET password = ?, password_changed_at = ? WHERE id = ?`,
       [hashedNewPassword, timestamp, req.user.id],
     );
+    await runQuery('INSERT INTO password_history VALUES (?, ?)', [
+      req.user.id,
+      hashedNewPassword,
+    ]);
     return res.status(200).send({message: 'Password updated successfully!'});
   } catch (error) {
     console.log(error);
