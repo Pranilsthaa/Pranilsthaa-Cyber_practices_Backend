@@ -26,7 +26,7 @@ const login = async (req, res) => {
   const {username, password, captcha} = req.body;
   // if (failureCount[req.ip] >= 3) {
   //   const params = new URLSearchParams();
-  //   params.append('secret', '6LebM1orAAAAAIdd2q44zjIe8F78ymp4K4m_xo1m');
+  //   params.append('secret', process.env.CAPTCHA_SECRET_KEY);
   //   params.append('response', captcha);
   //   params.append('remoteip', req.ip);
   //   // Verify the captcha
@@ -352,7 +352,7 @@ const register = async (req, res) => {
   // const verifyCaptcha = await axios.post(
   //   'https://www.google.com/recaptcha/api/siteverify',
   //   {
-  //     secret: '6LebM1orAAAAAIdd2q44zjIe8F78ymp4K4m_xo1m',
+  //     secret: process.env.CAPTCHA_SECRET_KEY,
   //     response: captcha,
   //   },
   // );

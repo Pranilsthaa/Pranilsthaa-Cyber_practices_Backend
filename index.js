@@ -15,10 +15,10 @@ const userRouter = require('./routes/userRouter');
 const {clientRouter} = require('./routes/clientRoute');
 const {managerRoute} = require('./routes/managerRoute');
 const {auditorRouter} = require('./routes/auditorRoute');
-
+const getLocalIPAddress = require('./helper/getlocalip');
 app.use(
   cors({
-    origin: 'http://192.168.1.21:3000',
+    origin: 'http://' + getLocalIPAddress() + ':3000',
     credentials: true, // Allow credentials cookies, authorization headers
   }),
 );
