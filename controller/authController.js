@@ -24,22 +24,22 @@ const failureCount = {};
 
 const login = async (req, res) => {
   const {username, password, captcha} = req.body;
-  // if (failureCount[req.ip] >= 3) {
-  //   const params = new URLSearchParams();
-  //   params.append('secret', process.env.CAPTCHA_SECRET_KEY);
-  //   params.append('response', captcha);
-  //   params.append('remoteip', req.ip);
-  //   // Verify the captcha
-  //   const verifyCaptcha = await axios.post(
-  //     'https://www.google.com/recaptcha/api/siteverify',
-  //     params,
-  //   );
-  //   console.log(verifyCaptcha.data);
-  //   if (!verifyCaptcha.data.success) {
-  //     res.status(400).send({message: 'Invalid Captcha'});
-  //     return;
-  //   }
-  // }
+  if (failureCount[req.ip] >= 3) {
+    const params = new URLSearchParams();
+    params.append('secret', process.env.CAPTCHA_SECRET_KEY);
+    params.append('response', captcha);
+    params.append('remoteip', req.ip);
+    // Verify the captcha
+    const verifyCaptcha = await axios.post(
+      'https://www.google.com/recaptcha/api/siteverify',
+      params,
+    );
+    console.log(verifyCaptcha.data);
+    if (!verifyCaptcha.data.success) {
+      res.status(400).send({message: 'Invalid Captcha'});
+      return;
+    }
+  }
   try {
     const result = await runQuery('SELECT * FROM user_cred WHERE username=?', [username]);
     if (result.length > 0) {
@@ -349,41 +349,43 @@ const finalizeLogin = async (req, res) => {
 
 const register = async (req, res) => {
   const {email, username, password, phone, address, captcha} = req.body;
-  // const verifyCaptcha = await axios.post(
-  //   'https://www.google.com/recaptcha/api/siteverify',
-  //   {
-  //     secret: process.env.CAPTCHA_SECRET_KEY,
-  //     response: captcha,
-  //   },
-  // );
-  // if (verifyCaptcha.data.success) {
-  try {
-    const result = await runQuery('SELECT * FROM user_cred WHERE username=?', [username]);
-    if (result.length > 0) {
-      return res.status(400).send({message: 'User already exists'});
-    } else {
-      const timestamp = new Date().toISOString().slice(0, 19).replace('T', ' ');
-      const hashedPassword = await bcrypt.hash(password, 10);
-      const result = await runQuery(
-        'INSERT INTO user_cred (email, username, password, phone, address, 2fa, password_changed_at) VALUES (?, ?, ?, ?, ?, ?, ?)',
-        [email, username, hashedPassword, phone, address, 0, timestamp],
-      );
-      await runQuery('INSERT INTO password_history VALUES (?, ?)', [
-        result.insertId,
-        hashedPassword,
+  const verifyCaptcha = await axios.post(
+    'https://www.google.com/recaptcha/api/siteverify',
+    {
+      secret: process.env.CAPTCHA_SECRET_KEY,
+      response: captcha,
+    },
+  );
+  if (verifyCaptcha.data.success) {
+    try {
+      const result = await runQuery('SELECT * FROM user_cred WHERE username=?', [
+        username,
       ]);
-      console.log('User created successfully');
-      return res.status(200).send({message: 'User created successfully'});
+      if (result.length > 0) {
+        return res.status(400).send({message: 'User already exists'});
+      } else {
+        const timestamp = new Date().toISOString().slice(0, 19).replace('T', ' ');
+        const hashedPassword = await bcrypt.hash(password, 10);
+        const result = await runQuery(
+          'INSERT INTO user_cred (email, username, password, phone, address, 2fa, password_changed_at) VALUES (?, ?, ?, ?, ?, ?, ?)',
+          [email, username, hashedPassword, phone, address, 0, timestamp],
+        );
+        await runQuery('INSERT INTO password_history VALUES (?, ?)', [
+          result.insertId,
+          hashedPassword,
+        ]);
+        console.log('User created successfully');
+        return res.status(200).send({message: 'User created successfully'});
+      }
+    } catch (e) {
+      if (e.code == 'ER_DUP_ENTRY') {
+        return res.status(400).send({message: 'Duplicate Email Entry'});
+      }
+      console.log(e);
     }
-  } catch (e) {
-    if (e.code == 'ER_DUP_ENTRY') {
-      return res.status(400).send({message: 'Duplicate Email Entry'});
-    }
-    console.log(e);
+  } else {
+    return res.status(400).send({message: 'Captcha verification failed'});
   }
-  // else {
-  //   return res.status(400).send({message: 'Captcha verification failed'});
-  // }
 };
 
 const logout = (req, res) => {
@@ -401,7 +403,74 @@ const verifyEmail = async (req, res) => {
     if (user.length > 0) {
       const otp = generateOTP(6);
       user_otp[email] = {id: user[0].id, otp: otp, expiry: Date.now() + 60 * 1000};
-      await sendMail(email, 'Test OTP', otp);
+      await sendMail(
+        email,
+        'Your OTP for account verification',
+        `
+        <!DOCTYPE html>
+        <html lang="en">
+        <head>
+          <meta charset="UTF-8" />
+          <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+          <title>OTP Verification</title>
+          <style>
+        body {
+          margin: 0;
+          padding: 0;
+          font-family: 'Segoe UI', sans-serif;
+          background-color: #f5f7fa;
+          color: #333;
+          display: flex;
+          justify-content: center;
+          align-items: center;
+          height: 100vh;
+        }
+        .container {
+          background: #fff;
+          padding: 30px;
+          border-radius: 10px;
+          box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+          text-align: center;
+          max-width: 400px;
+          width: 100%;
+        }
+        h2 {
+          color: #2c3e50;
+          margin-bottom: 20px;
+        }
+        p {
+          font-size: 16px;
+          margin-bottom: 20px;
+          color: #555;
+        }
+        .otp {
+          font-size: 24px;
+          font-weight: bold;
+          color: #007bff;
+          letter-spacing: 2px;
+          margin-bottom: 20px;
+        }
+        .footer {
+          font-size: 12px;
+          color: #888;
+          margin-top: 20px;
+        }
+          </style>
+        </head>
+        <body>
+          <div class="container">
+        <h2>🔑 Your OTP Code</h2>
+        <p>Please use the following OTP to verify your account:</p>
+        <div class="otp">${otp}</div>
+        <p>This OTP is valid for 1 minute. Do not share it with anyone.</p>
+        <div class="footer">
+          If you did not request this, please ignore this email.
+        </div>
+          </div>
+        </body>
+        </html>
+        `,
+      );
       return res
         .status(200)
         .send({message: 'If the email exists, an OTP has been sent.'});

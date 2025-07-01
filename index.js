@@ -27,19 +27,25 @@ app.use(express.urlencoded({extended: true}));
 app.use(cookieParser());
 
 const limiter = rateLimit({
-  windowMs: 15 * 60 * 1000, // 15 minutes
-  limit: 10, // Limit each IP to 10 per 15 minutes
+  windowMs: 5 * 60 * 1000, // 5 minutes
+  limit: 10, // Limit each IP to 30 per 5 minutes
   standardHeaders: 'draft-8',
   legacyHeaders: false, // Disable the `X-RateLimit-*` headers.
   handler: (req, res) => {
     res.status(429).json({
-      message: 'Too many requests from this IP, please try again after 15 minutes.',
+      message: 'Too many requests from this IP, please try again after 5 minutes.',
     });
   },
 });
-
 // Apply the rate limiting middleware to all requests.
-// app.use(limiter);
+// app.use((req, res, next) => {
+//   if (req.path === '/user/get-permission') {
+//     // Skip rate limiter for this route
+//     return next();
+//   }
+//   // Apply limiter to all other routes
+//   limiter(req, res, next);
+// });
 
 app.use('/', authRouter);
 app.use('/admin', authenticate, authenticateAdmin, adminRoute);
